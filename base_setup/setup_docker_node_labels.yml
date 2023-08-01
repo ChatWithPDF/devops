@@ -1,0 +1,59 @@
+- name: Set node_vm_type label on all gpu nodes
+  hosts: _manager
+  vars:
+    node_ids: []
+  become: yes
+  tasks:
+    - name: Run Docker Info and Get Node ID
+      shell: |
+        sudo docker info | grep NodeID | awk '{print $2}'
+      register: node_id_output
+      changed_when: false
+      ignore_errors: yes
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['_worker_gpu'] }}"
+
+    - name: Parse JSON output into array
+      set_fact:
+        node_ids: "{{ node_id_output.results | json_query('[*].stdout') }}"
+
+    - name: Log Node IDs
+      debug:
+        var: node_ids
+
+    - name: Set node_vm_type label using nodeIds extracted on all worker node
+      shell: |
+        docker node update --label-add node_vm_type=gpu {{ item }}
+      with_items: "{{ node_ids }}"
+      when: node_ids | length > 0
+
+- name: Set node_vm_type label on all non gpu nodes
+  hosts: _manager
+  vars:
+    node_ids: []
+  become: yes
+  tasks:
+    - name: Run Docker Info and Get Node ID
+      shell: |
+        sudo docker info | grep NodeID | awk '{print $2}'
+      register: node_id_output
+      changed_when: false
+      ignore_errors: yes
+      delegate_to: "{{ item }}"
+      with_items: "{{ groups['_worker'] }}"
+
+    - name: Parse JSON output into array
+      set_fact:
+        node_ids: "{{ node_id_output.results | json_query('[*].stdout') }}"
+
+    - name: Log Node IDs
+      debug:
+        var: node_ids
+
+    - name: Set node_vm_type label using nodeIds extracted on all worker node
+      shell: |
+        docker node update --label-add node_vm_type=non_gpu {{ item }}
+      with_items: "{{ node_ids }}"
+      when: node_ids | length > 0
+
+

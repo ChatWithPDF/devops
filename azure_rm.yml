@@ -1,0 +1,12 @@
+# Make sure the file name ends with azure_rm.yml or azure_rm.yaml
+
+plugin: azure_rm
+include_vm_resource_groups:
+  - chatwithpdf
+include_vmss_resource_groups:
+  - chatwithpdf
+auth_source: auto
+keyed_groups:
+  - key: tags.type
+hostvar_expressions:
+  ansible_host: (private_ipv4_addresses) | first
