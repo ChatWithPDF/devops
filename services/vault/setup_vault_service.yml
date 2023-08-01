@@ -1,0 +1,194 @@
+- name: Setup stateful services
+  hosts: _manual
+  become: true
+  tasks:
+    - name: Create a vault dir if it does not exist
+      ansible.builtin.file:
+        path: /vault
+        state: directory
+        mode: "0755"
+
+    - name: Create a config dir if it does not exist
+      ansible.builtin.file:
+        path: /vault/volumes/config
+        state: directory
+        mode: "0755"
+
+    - name: Create a file dir if it does not exist
+      ansible.builtin.file:
+        path: /vault/volumes/file
+        state: directory
+        mode: "0755"
+
+    - name: Create a logs dir if it does not exist
+      ansible.builtin.file:
+        path: /vault/volumes/logs
+        state: directory
+        mode: "0755"
+
+    - name: Copy file from host to machine
+      copy:
+        src: "{{ playbook_dir }}/docker-compose.yml"
+        dest: /vault/docker-compose.yml
+
+    - name: Copy file from host to machine
+      copy:
+        src: "{{ playbook_dir }}/vault.json"
+        dest: /vault/volumes/config/vault.json
+
+    - name: Create and start services
+      community.docker.docker_compose:
+        project_src: /vault/.
+      register: output
+
+    - debug:
+        var: output
+
+    - name: Register middleware host with variable
+      add_host:
+        name: "MIDDLEWARE_HOST"
+        MANUAL_MACHINE_IP: "{{ ansible_default_ipv4.address }}"
+
+- name: Install Packages Required
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Install package vault  
+      ansible.builtin.apt:
+        name: vault
+        state: present
+    
+    - name: Install package jq  
+      ansible.builtin.apt:
+        name: jq
+        state: present
+
+
+- name: Automate Vault Setup
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    VAULT_ADDR: "http://{{ hostvars['MIDDLEWARE_HOST']['MANUAL_MACHINE_IP']}}:8200"
+  tasks:
+    - name: Ensure VAULT_ADDR is set in environment
+      ansible.builtin.lineinfile:
+        path: ~/.bashrc
+        regexp: '^export VAULT_ADDR='
+        line: export VAULT_ADDR={{ VAULT_ADDR }}
+    
+
+    - name: Retrieve Vault status
+      shell: |
+        vault status --address={{ VAULT_ADDR }} --format=json
+      register: vault_status_output
+      ignore_errors: true
+
+    - name: Convert JSON to Dictionary
+      set_fact:
+        vault_status_dict: "{{ vault_status_output.stdout | from_json }}"
+
+    - name: Check if Vault is initialized
+      set_fact:
+        vault_initialized: '{{ vault_status_dict.initialized }}'
+        vault_unlocked: '{{ vault_status_dict.sealed }}'
+
+    - name: Initialize Vault
+      command: vault operator init -key-shares=6 -key-threshold=3 --address={{ VAULT_ADDR }}
+      register: init_output
+      when: vault_initialized == false
+
+    - name: Save initialization output to a file
+      copy:
+        content: "{{ init_output.stdout }}"
+        dest: initialization-data.txt
+      when: vault_initialized == false
+
+    - name: Set Login Token and Vault Addr in environment during vault initialization
+      shell: |
+        root_token_text=$(grep "Initial Root Token" initialization-data.txt)
+        if [[ $root_token_text =~ :[[:space:]]*(.*) ]]; then
+                token="${BASH_REMATCH[1]}"
+                echo "export ANSIBLE_HASHI_VAULT_TOKEN=$token" >> ~/.bashrc
+                echo "export ANSIBLE_HASHI_VAULT_ADDR=$VAULT_ADDR" >> ~/.bashrc
+        fi
+      environment:
+        VAULT_ADDR: "{{ VAULT_ADDR }}"
+      args:
+        executable: /bin/bash
+      when: vault_initialized == false
+
+
+    - name: Check if Vault is initialized
+      set_fact:
+        vault_initialized: true
+
+    - name: Extract Unseal keys and Unlock Vault
+      shell: |
+        unseal_keys=$(grep "Unseal Key" initialization-data.txt)
+        keys=()
+        while IFS= read -r line; do
+            if [[ $line =~ :[[:space:]]*(.*) ]]; then
+                key="${BASH_REMATCH[1]}"
+                echo "key: $key"
+                keys+=("$key")
+                vault operator unseal $key  
+            fi
+        done <<< "$unseal_keys"
+      environment:
+        VAULT_ADDR: "{{ VAULT_ADDR }}"
+      args:
+        executable: /bin/bash
+      when: vault_initialized == true and vault_unlocked == true
+
+    - name: Login to Vault
+      shell: |
+        root_token_text=$(grep "Initial Root Token" initialization-data.txt)
+        if [[ $root_token_text =~ :[[:space:]]*(.*) ]]; then
+                token="${BASH_REMATCH[1]}"
+                vault login $token
+        fi
+      environment:
+        VAULT_ADDR: "{{ VAULT_ADDR }}"
+      args:
+        executable: /bin/bash
+
+    - name: Retrieve Secret Engine Status
+      shell: vault secrets list -format=json | jq '."secret/"'
+      register: secrets_output
+      environment:
+        VAULT_ADDR: "{{ VAULT_ADDR }}"
+
+    - name: Check if Secret Engine is enabled
+      set_fact:
+        secrets_enabled: "{{ 'true' if secrets_output.stdout != 'null' else 'false' }}"
+    
+    - debug:
+        var: secrets_enabled
+
+    - name: Enable Secret Engine
+      shell: vault secrets enable -version=2 -path=secret kv
+      args:
+        executable: /bin/bash
+      environment:
+        VAULT_ADDR: "{{ VAULT_ADDR }}"
+      when: secrets_enabled == false
+
+    - name: Enable Secret Engine
+      shell: |
+        vault kv put secret/test x=y
+      args:
+        executable: /bin/bash
+      environment:
+        VAULT_ADDR: "{{ VAULT_ADDR }}"
+      when: secrets_enabled == false
+
+    - name: Test Vault Setup
+      set_fact:
+        x: "{{ lookup('hashi_vault', 'secret=secret/data/test:x') }}"
+      environment:
+        VAULT_ADDR: "{{ VAULT_ADDR }}"
+      args:
+        executable: /bin/bash
+
+    - debug:
+        var: x
