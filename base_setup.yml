@@ -1,0 +1,3 @@
+- import_playbook: base_setup/setup_docker.yml
+- import_playbook: base_setup/setup_swarm.yml
+- import_playbook: base_setup/setup_docker_node_labels.yml
