@@ -1,0 +1,133 @@
+- name: Pre deployment setup
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    GITHUB_REPOSITORY_URL: "{{ lookup('hashi_vault', 'secret=secret/data/common:GITHUB_REPOSITORY_URL') }}"
+    GITHUB_BRANCH: "{{ lookup('hashi_vault', 'secret=secret/data/common:GITHUB_BRANCH') }}"
+    #chatwithpdf/ai-tools/blob/restructure
+  tasks:
+    - name: Create an aitools directory if it does not exist already
+      ansible.builtin.file:
+        path: "/aitools"
+        state: directory
+        mode: "0755"
+
+    - name: Retrieve environment file from Vault
+      set_fact:
+        env_file_common: "{{ lookup('hashi_vault', 'secret=secret/data/common') }}"
+      changed_when: false
+
+    - name: Generate .generate.env from Vault data
+      copy:
+        dest: "/aitools/.generate.env"
+        content: |
+          {% for key, value in env_file.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}
+      vars:
+        env_file: "{{ env_file_common }}"
+
+    - name: Retrieve environment file from Vault
+      set_fact:
+        env_file: "{{ lookup('hashi_vault', 'secret=secret/data/aitools') }}"
+      changed_when: false
+
+    - name: Generate .env from Vault data
+      copy:
+        dest: "/aitools/.env"
+        content: |
+          {% for key, value in env_file.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}
+      vars:
+        env_file: "{{ env_file }}"
+
+    - name: Get config.json file
+      get_url:
+        url: "https://raw.githubusercontent.com/{{ GITHUB_REPOSITORY_URL }}/{{ GITHUB_BRANCH }}/config.json"
+        dest: "/aitools/config.json"
+        force: true
+
+    - name: Get generate_independent_docker.sh"
+      get_url:
+        url: "https://raw.githubusercontent.com/{{ GITHUB_REPOSITORY_URL }}/{{ GITHUB_BRANCH }}/generate_independent_docker.sh"
+        dest: "/aitools/generate_independent_docker.sh"
+        mode: "0755"
+        force: true
+
+    - name: Get generate.sh script
+      get_url:
+        url: "https://raw.githubusercontent.com/{{ GITHUB_REPOSITORY_URL }}/{{ GITHUB_BRANCH }}/generate.sh"
+        dest: "/aitools/generate.sh"
+        mode: "0755"
+        force: true
+
+    - name: Login to Github Packages Registry
+      community.docker.docker_login:
+        registry_url: ghcr.io/
+        username: "{{ lookup('community.hashi_vault.hashi_vault', 'secret=secret/data/common:GITHUB_USERNAME') }}"
+        password: "{{ lookup('community.hashi_vault.hashi_vault', 'secret=secret/data/common:GITHUB_TOKEN') }}"
+
+    - name: Install jq
+      apt:
+        name: jq
+        state: present
+
+    - name: Generate Docker-Compose File
+      shell: "./generate_independent_docker.sh"
+      args:
+        chdir: "/aitools"
+
+    - name: Generaten nginx File
+      shell: "./generate.sh"
+      args:
+        chdir: "/aitools"
+
+- name: Pull Docker Images
+  hosts: _worker_gpu
+  become: true
+  tasks:
+    - name: Pull Docker Images
+      docker_compose:
+        project_src: "/aitools"
+        files: docker-compose-independent-generated.yaml
+        pull: yes
+
+- name: Deployment
+  hosts: _manager
+  become: true
+  tasks:
+    - name: Deploy aitools models
+      docker_stack:
+        compose: "/aitools/docker-compose-independent-generated.yaml"
+        name: aitools
+        state: present
+
+- name: Setup nginx config for aitools
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    DOMAIN_NAME: "{{ lookup('hashi_vault', 'secret=secret/data/common:DOMAIN_NAME') }}"
+  tasks: 
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: copy nginx conf file to desired location
+      copy:
+        src: "/aitools/{{ DOMAIN_NAME }}.conf"
+        dest: /nginx/conf.d/{{ DOMAIN_NAME }}.conf
+        remote_src: true
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+
