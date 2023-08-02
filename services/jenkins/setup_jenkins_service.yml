@@ -1,0 +1,58 @@
+- name: Setup stateful services
+  hosts: _manual
+  become: true
+  tasks:
+    - name: Create a jenkins dir if it does not exist
+      ansible.builtin.file:
+        path: /jenkins
+        state: directory
+        mode: '0755'
+
+    - name: Copy file from host to machine
+      copy:
+        src: "{{ playbook_dir }}/docker-compose.yml"
+        dest: /jenkins/docker-compose.yml
+
+    - name: Create and start services
+      community.docker.docker_compose:
+        project_src: /jenkins/
+      register: output
+
+    - debug:
+        var: output
+
+    - name: Register middleware host with variable
+      add_host:
+        name: "MIDDLEWARE_HOST"
+        SERVER_NAME: "jenkins.*"
+        PROXY_ADDRESS: "http://{{ ansible_default_ipv4.address }}:9000"
+
+- name: Setup nginx config for jenkins
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    server_name: "{{ hostvars['MIDDLEWARE_HOST']['SERVER_NAME'] }}"
+    proxy_address: "{{ hostvars['MIDDLEWARE_HOST']['PROXY_ADDRESS'] }}"
+  tasks: 
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: generate a nginx conf file
+      template:
+        src: "~/devops/templates/nginx.conf.j2"
+        dest: /nginx/conf.d/jenkins.conf
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+
+
