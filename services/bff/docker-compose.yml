@@ -1,0 +1,21 @@
+version: '3.6'
+services:
+  bff_timescaledb:
+    container_name: bff_timescaledb
+    image: samagragovernance/postgres:latest-pg15
+    restart: always
+    logging:
+      driver: syslog
+      options:
+        syslog-address: "udp://10.3.1.6:12201"
+        tag: bff_timescaledb
+    ports:
+      - "5432:5432"
+    volumes:
+      - bff_pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+volumes:
+  bff_pgdata:
