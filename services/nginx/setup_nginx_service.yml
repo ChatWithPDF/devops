@@ -1,0 +1,51 @@
+- name: Create a mountable conf.d on every machine
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  tasks:
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: Copy contents of conf.d directory to created directory
+      copy:
+        src: "{{ playbook_dir }}/conf.d/"
+        dest:  /nginx/conf.d/
+
+- name: Create Docker service on Swarm cluster
+  hosts: _manager
+  become: true
+  vars:
+    service_name: nginx
+    image_name: nginx
+    image_tag: latest
+    replicas: 1
+  tasks:
+    - name: Create Docker service
+      docker_swarm_service:
+        name: "{{ service_name }}"
+        image: "{{ image_name }}:{{ image_tag }}"
+        replicas: "{{ replicas }}"
+        force_update: "yes"
+        mounts:
+          - readonly: yes
+            source: /nginx/conf.d
+            target: /etc/nginx/conf.d
+        publish:
+          - published_port: 80
+            target_port: 80
+            protocol: tcp
+            mode: ingress
+
+          - published_port: 443
+            target_port: 443
+            protocol: tcp
+            mode: ingress
+        state: present
