@@ -52,6 +52,8 @@
 - name: Install Packages Required
   hosts: localhost
   become: true
+  vars:
+    server_name: 
   tasks:
     - name: Install package vault  
       ansible.builtin.apt:
@@ -192,3 +194,38 @@
 
     - debug:
         var: x
+
+    - name: Register middleware host with variable
+      add_host:
+        name: "MIDDLEWARE_HOST"
+        SERVER_NAME: "vault.*"
+        PROXY_ADDRESS: "{{ VAULT_ADDR }}"
+
+- name: Setup nginx config for vault
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    server_name: "{{ hostvars['MIDDLEWARE_HOST']['SERVER_NAME'] }}"
+    proxy_address: "{{ hostvars['MIDDLEWARE_HOST']['PROXY_ADDRESS'] }}"
+  tasks: 
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: generate a nginx conf file
+      template:
+        src: "{{ playbook_dir }}/nginx.conf.j2"
+        dest: /nginx/conf.d/vault.conf
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+
