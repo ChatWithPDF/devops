@@ -104,6 +104,7 @@
   vars:
     server_name: "bff.*"
     proxy_address: "http://{{ hostvars['MIDDLEWARE_HOST']['PROXY_ADDRESS'] }}:8081"
+    config: ["client_max_body_size 100M;"]
   tasks: 
     - name: Create a /nginx directory
       ansible.builtin.file:

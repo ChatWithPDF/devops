@@ -5,5 +5,11 @@ server {
 
     location / {
         proxy_pass {{ proxy_address }};
+
+        {% if config is defined %}
+            {%- for line in config %}
+                {{ line -}}
+            {% endfor %}
+        {% endif %}
     }
 }
