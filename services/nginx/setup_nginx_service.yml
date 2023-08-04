@@ -1,6 +1,9 @@
 - name: Create a mountable conf.d on every machine
   hosts: _manager:_worker:_worker_gpu
   become: true
+  vars: 
+    fullchain: "{{ lookup('community.hashi_vault.hashi_vault', 'secret=secret/data/nginx:fullchain') }}"
+    privkey: "{{ lookup('community.hashi_vault.hashi_vault', 'secret=secret/data/nginx:privkey') }}"
   tasks:
     - name: Create a /nginx directory
       ansible.builtin.file:
@@ -13,6 +16,24 @@
         path: /nginx/conf.d
         state: directory
         mode: '0755'
+
+    - name: Create a /nginx/certificates directory
+      ansible.builtin.file:
+        path: /nginx/certificates
+        state: directory
+        mode: '0755'
+    
+    - name: Create fullchain.pem
+      copy:
+        dest: /nginx/certificates/fullchain.pem
+        content: |
+          {{ fullchain }}
+    
+    - name: Create privkey.pem
+      copy:
+        dest: /nginx/certificates/privkey.pem
+        content: |
+          {{ privkey }}
 
     - name: Copy contents of conf.d directory to created directory
       copy:
@@ -38,6 +59,9 @@
           - readonly: yes
             source: /nginx/conf.d
             target: /etc/nginx/conf.d
+          - readonly: yes
+            source: /nginx/certificates
+            target: /etc/nginx/certificates
         publish:
           - published_port: 80
             target_port: 80

@@ -92,6 +92,7 @@
         project_src: "/aitools"
         files: docker-compose-independent-generated.yaml
         pull: yes
+      ignore_errors: yes
 
 - name: Deployment
   hosts: _manager

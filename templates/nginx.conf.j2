@@ -1,7 +1,27 @@
 server {
+    {% if use_https %}
+
+    listen       443 ssl;
+    listen  [::]:443 ssl;
+
+    {% else %}
+
     listen       80;
     listen  [::]:80;
+
+    {% endif %}
+
     server_name  {{ server_name }};
+
+    {% if use_https %}
+
+        ssl_certificate /etc/nginx/certificates/fullchain.pem;
+        ssl_certificate_key /etc/nginx/certificates/privkey.pem;
+        ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
+        ssl_ciphers         HIGH:!aNULL:!MD5;
+
+    {% endif %}
+
 
     location / {
         proxy_pass {{ proxy_address }};
@@ -13,3 +33,4 @@ server {
         {% endif %}
     }
 }
+
