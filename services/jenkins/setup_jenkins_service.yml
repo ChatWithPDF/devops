@@ -33,6 +33,7 @@
   vars:
     server_name: "{{ hostvars['MIDDLEWARE_HOST']['SERVER_NAME'] }}"
     proxy_address: "{{ hostvars['MIDDLEWARE_HOST']['PROXY_ADDRESS'] }}"
+    use_https: true
   tasks: 
     - name: Create a /nginx directory
       ansible.builtin.file:

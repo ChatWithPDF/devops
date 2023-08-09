@@ -127,3 +127,4 @@
     - name: Run nginx reload command on every running nginx container
       shell: |
         docker exec $(docker ps -q -f name=nginx) nginx -s reload
+      ignore_errors: yes
