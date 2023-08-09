@@ -11,6 +11,7 @@
         path: "/aitools"
         state: directory
         mode: "0755"
+    
 
     - name: Retrieve environment file from Vault
       set_fact:
@@ -83,6 +84,18 @@
       args:
         chdir: "/aitools"
 
+    - name: Copy Set Env Script
+      copy:
+        src: ./set_env.sh
+        dest: /aitools/set_env.sh
+
+    - name: Generate compose file with environment variables
+      shell: |
+        chmod +x set_env.sh
+        ./set_env.sh
+      args:
+        chdir: "/aitools"
+ 
 - name: Pull Docker Images
   hosts: _worker_gpu
   become: true
@@ -98,10 +111,21 @@
   hosts: _manager
   become: true
   tasks:
+    - name: Remove stack
+      docker_stack:
+        name: aitools
+        state: absent
+
+    - name: Sleep for 10 seconds and continue with play
+      ansible.builtin.wait_for:
+        timeout: 10
+      delegate_to: localhost
+
     - name: Deploy aitools models
       docker_stack:
-        compose: "/aitools/docker-compose-independent-generated.yaml"
+        compose: "/aitools/docker-compose.yml"
         name: aitools
+        with_registry_auth: true
         state: present
 
 - name: Setup nginx config for aitools
@@ -131,4 +155,4 @@
     - name: Run nginx reload command on every running nginx container
       shell: |
         docker exec $(docker ps -q -f name=nginx) nginx -s reload
-
+      ignore_errors: yes
