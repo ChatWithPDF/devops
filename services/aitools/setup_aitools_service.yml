@@ -11,7 +11,7 @@
         path: "/aitools"
         state: directory
         mode: "0755"
-    
+
 
     - name: Retrieve environment file from Vault
       set_fact:
@@ -95,17 +95,6 @@
         ./set_env.sh
       args:
         chdir: "/aitools"
- 
-- name: Pull Docker Images
-  hosts: _worker_gpu
-  become: true
-  tasks:
-    - name: Pull Docker Images
-      docker_compose:
-        project_src: "/aitools"
-        files: docker-compose-independent-generated.yaml
-        pull: yes
-      ignore_errors: yes
 
 - name: Deployment
   hosts: _manager

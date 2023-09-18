@@ -47,6 +47,7 @@
   vars:
     server_name: "hasura.*"
     proxy_address: "http://{{ hostvars['MIDDLEWARE_HOST']['PROXY_ADDRESS'] }}"
+    use_https: true
   tasks: 
     - name: Create a /nginx directory
       ansible.builtin.file:
