@@ -41,14 +41,22 @@
     - name: Register middleware host with variable
       add_host:
         name: "MIDDLEWARE_HOST"
-        PROXY_ADDRESS: "hasura:{{ container_port }}"
+        service_name: "{{ service_name }}"
+        container_port: "{{ container_port }}"
+
+    - name: Sleep for 5 seconds and continue with play
+      ansible.builtin.wait_for:
+        timeout: 5
+      delegate_to: localhost
 
 - name: Setup nginx config for bff
   hosts: _manager:_worker:_worker_gpu
   become: true
   vars:
-    server_name: "hasura.*"
-    proxy_address: "http://{{ hostvars['MIDDLEWARE_HOST']['PROXY_ADDRESS'] }}"
+    service_name: "{{ hostvars['MIDDLEWARE_HOST']['service_name'] }}"
+    upstream: true
+    service_port: "{{ hostvars['MIDDLEWARE_HOST']['container_port'] }}"
+    proxy_address: "http://{{ service_name }}"
     use_https: true
   tasks: 
     - name: Create a /nginx directory
@@ -65,7 +73,7 @@
 
     - name: generate a nginx conf file
       template:
-        src: "~/devops/templates/nginx.conf.j2"
+        src: "~/devops/templates/nginx-v2.conf.j2"
         dest: /nginx/conf.d/hasura.conf
 
     - name: Run nginx reload command on every running nginx container

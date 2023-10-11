@@ -50,7 +50,7 @@
       delegate_to: localhost
 
 - name: Setup nginx config for user-service
-  hosts: _manager:_worker:_gpu
+  hosts: _manager:_worker:_worker_gpu
   become: true
   vars:
     service_name: "{{ hostvars['MIDDLEWARE_HOST']['service_name'] }}"
