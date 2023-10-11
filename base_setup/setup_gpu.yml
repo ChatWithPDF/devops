@@ -2,6 +2,13 @@
   hosts: _worker_gpu
   become: true
   tasks:
+    - name: Install NVIDIA Drivers
+      shell: |
+        wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb 
+        sudo dpkg -i cuda-keyring_1.0-1_all.deb
+        sudo apt-get update
+        sudo apt-get -y install cuda-drivers
+    
     - name: Add NVIDIA container runtime GPG key
       apt_key:
         url: https://nvidia.github.io/nvidia-container-runtime/gpgkey
@@ -21,6 +28,7 @@
       apt:
         name:
           - nvidia-container-runtime
+          - nvidia-docker2
         state: present
 
 
