@@ -43,7 +43,6 @@
         name: "MIDDLEWARE_HOST"
         service_name: "{{ service_name }}"
         container_port: "{{ container_port }}"
-        PROXY_ADDRESS: "{{ ansible_default_ipv4.address }}:{{ published_port }}"
 
     - name: Sleep for 5 seconds and continue with play
       ansible.builtin.wait_for:
@@ -55,9 +54,9 @@
   become: true
   vars:
     service_name: "{{ hostvars['MIDDLEWARE_HOST']['service_name'] }}"
-    upstream: ["server {{ hostvars['MIDDLEWARE_HOST']['service_name'] }}:{{ hostvars['MIDDLEWARE_HOST']['container_port'] }};"]
-    server_name: "user-service.*"
+    service_port: "{{ hostvars['MIDDLEWARE_HOST']['container_port'] }}"
     proxy_address: "http://{{ service_name }}"
+    upstream: true
     use_https: true
   tasks:
     - name: Create a /nginx directory

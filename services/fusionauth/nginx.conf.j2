@@ -1,8 +1,6 @@
-{% if upstream is defined %}
+{% if upstream %}
 upstream {{ service_name }} {
-  {%- for line in upstream %}
-     {{ line -}}
-  {% endfor %}
+  server {{ service_name }}:{{ service_port }};
 }
 {% endif %}
 
@@ -19,7 +17,7 @@ server {
 
     {% endif %}
 
-    server_name  {{ server_name }};
+    server_name  {{ service_name }}.*;
 
     {% if use_https %}
 

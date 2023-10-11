@@ -92,19 +92,23 @@
         name: "MIDDLEWARE_HOST"
         service_name: "{{ service_name }}"
         container_port: "{{ container_port }}"
-        PROXY_ADDRESS: "{{ ansible_default_ipv4.address }}"
+
+    - name: Sleep for 5 seconds and continue with play
+      ansible.builtin.wait_for:
+        timeout: 5
+      delegate_to: localhost
 
 - name: Setup nginx config for fusionauth
   hosts: _manager:_worker:_worker_gpu
   become: true
   vars:
-    server_name: "fusionauth.*"
     service_name: "{{ hostvars['MIDDLEWARE_HOST']['service_name'] }}"
-    upstream: ["server {{ hostvars['MIDDLEWARE_HOST']['service_name'] }}:{{ hostvars['MIDDLEWARE_HOST']['container_port'] }};" ]
+    upstream: true
+    service_port: "{{ hostvars['MIDDLEWARE_HOST']['container_port'] }}"
     proxy_address: "http://{{ service_name }}"
     config: ["proxy_set_header Host $host;","proxy_set_header X-Real-IP $remote_addr;","proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;", "proxy_set_header X-Forwarded-Proto https;", "proxy_set_header X-Forwarded-Port 443;"]
     use_https: true
-  tasks: 
+  tasks:
     - name: Create a /nginx directory
       ansible.builtin.file:
         path: /nginx
