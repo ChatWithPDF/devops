@@ -1,7 +1,7 @@
 - name: Create a mountable conf.d on every machine
   hosts: _manager:_worker:_worker_gpu
   become: true
-  vars: 
+  vars:
     fullchain: "{{ lookup('community.hashi_vault.hashi_vault', 'secret=secret/data/nginx:fullchain') }}"
     privkey: "{{ lookup('community.hashi_vault.hashi_vault', 'secret=secret/data/nginx:privkey') }}"
   tasks:
@@ -22,13 +22,13 @@
         path: /nginx/certificates
         state: directory
         mode: '0755'
-    
+
     - name: Create fullchain.pem
       copy:
         dest: /nginx/certificates/fullchain.pem
         content: |
           {{ fullchain }}
-    
+
     - name: Create privkey.pem
       copy:
         dest: /nginx/certificates/privkey.pem
@@ -55,6 +55,8 @@
         image: "{{ image_name }}:{{ image_tag }}"
         replicas: "{{ replicas }}"
         force_update: "yes"
+        networks:
+          - communication
         mounts:
           - readonly: yes
             source: /nginx/conf.d

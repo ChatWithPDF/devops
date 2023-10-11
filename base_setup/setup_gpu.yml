@@ -1,0 +1,35 @@
+- name: Install Docker
+  hosts: _worker_gpu
+  become: true
+  tasks:
+    - name: Add NVIDIA container runtime GPG key
+      apt_key:
+        url: https://nvidia.github.io/nvidia-container-runtime/gpgkey
+        state: present
+
+    - name: Add NVIDIA container runtime repository
+      shell: |
+        distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
+        curl -s -L https://nvidia.github.io/nvidia-container-runtime/$distribution/nvidia-container-runtime.list | \
+        sudo tee /etc/apt/sources.list.d/nvidia-container-runtime.list
+
+    - name: Update APT repositories
+      apt:
+        update_cache: yes
+
+    - name: Install required packages for Utilising GPU
+      apt:
+        name:
+          - nvidia-container-runtime
+        state: present
+
+
+    - name: Configure docker daemon to use nvidia as default runtime
+      copy:
+        src: "{{ playbook_dir }}/daemon.json"
+        dest: "/etc/docker/daemon.json"
+
+    - name: Restart Docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
