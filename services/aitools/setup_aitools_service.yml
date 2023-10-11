@@ -100,16 +100,6 @@
   hosts: _manager
   become: true
   tasks:
-    - name: Remove stack
-      docker_stack:
-        name: aitools
-        state: absent
-
-    - name: Sleep for 10 seconds and continue with play
-      ansible.builtin.wait_for:
-        timeout: 10
-      delegate_to: localhost
-
     - name: Deploy aitools models
       docker_stack:
         compose: "/aitools/docker-compose.yml"
@@ -145,3 +135,7 @@
       shell: |
         docker exec $(docker ps -q -f name=nginx) nginx -s reload
       ignore_errors: yes
+      register: result
+      retries: 5
+      delay: 10
+      until: result is not failed
