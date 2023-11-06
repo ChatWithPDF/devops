@@ -1,0 +1,4 @@
+identifier: "bot-prod"
+
+# To start to use identifier as the image_tag
+tag: "chat-with-pdf"
