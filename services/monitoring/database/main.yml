@@ -1,0 +1,16 @@
+- name: Copy Database Directory
+  hosts: _manager:_worker:_worker_gpu:_manual
+
+  - name: Copy Database Directory
+    copy:
+      src: "{{ playbook_dir }}"
+      dest: "/"
+
+- name: Deployment for Stateful VM
+  hosts: _manual
+  become: true
+  tasks:
+    - name: Deploy Database on Stateful VM
+      community.docker.docker_compose:
+        project_src: /database/
+      register: output
