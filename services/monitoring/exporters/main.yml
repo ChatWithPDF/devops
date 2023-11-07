@@ -25,3 +25,33 @@
         compose: "/exporters/docker-compose.yml"
         name: exporters
         state: present
+
+- name: Update docker daemon file for GPU Nodes
+  hosts: _worker_gpu
+  become: true
+  tasks:
+    - name: Configure docker daemon
+      copy:
+        src: "{{ playbook_dir }}/exporters/docker/gpu/daemon.json"
+        dest: "/etc/docker/daemon.json"
+    
+    - name: Restart Docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+
+- name: Update docker daemon file for Non-GPU Nodes
+  hosts: _worker:_manager:_manual
+  become: true
+  tasks:
+    - name: Configure docker daemon
+      copy:
+        src: "{{ playbook_dir }}/exporters/docker/non-gpu/daemon.json"
+        dest: "/etc/docker/daemon.json"
+
+    - name: Restart Docker
+      ansible.builtin.service:
+        name: docker
+        state: restarted
+
+
