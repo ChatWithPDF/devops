@@ -48,6 +48,10 @@ services:
       memlock:
         soft: -1
         hard: -1
+    deploy:
+      resources:
+        limits:
+          memory: 4GB
     volumes:
       - fusionauth_search_data:/usr/share/elasticsearch/data
 
