@@ -1,10 +1,11 @@
 - name: Copy Exporters Directory
   hosts: _manager:_worker:_worker_gpu:_manual
-
-  - name: Copy Exporters Directory
-    copy:
-      src: "{{ playbook_dir }}"
-      dest: "/"
+  become: true
+  tasks:
+    - name: Copy Exporters Directory
+      copy:
+        src: "{{ playbook_dir }}"
+        dest: "/"
 
 - name: Deployment for Stateful VM
   hosts: _manual
