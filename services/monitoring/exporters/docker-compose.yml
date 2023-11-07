@@ -5,7 +5,7 @@ services:
     container_name: promtail
     volumes:
       - /var/log:/var/log
-      - /exporters/config/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - /exporters/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
     command: -config.file=/etc/promtail/promtail-config.yaml
     restart: always
     deploy:
