@@ -1,0 +1,26 @@
+- name: Copy Exporters Directory
+  hosts: _manager:_worker:_worker_gpu:_manual
+
+  - name: Copy Exporters Directory
+    copy:
+      src: "{{ playbook_dir }}"
+      dest: "/"
+
+- name: Deployment for Stateful VM
+  hosts: _manual
+  become: true
+  tasks:
+    - name: Deploy Exporters on Stateful VM
+      community.docker.docker_compose:
+        project_src: /exporters/
+      register: output
+
+- name: Deployment for Swarm
+  hosts: _manager
+  become: true
+  tasks:
+    - name: Deploy Exporters on Swarm
+      docker_stack:
+        compose: "/exporters/docker-compose.yml"
+        name: exporters
+        state: present

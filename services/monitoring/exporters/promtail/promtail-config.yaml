@@ -1,0 +1,19 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  #To Do:  IP to be passed as an environment variable
+  - url: http://10.4.1.6:3100/loki/api/v1/push
+
+scrape_configs:
+- job_name: systems
+  static_configs:
+  - targets:
+      - localhost
+    labels:
+      job: varlogs
+      __path__: /var/log/*log
