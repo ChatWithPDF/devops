@@ -11,13 +11,6 @@
   tasks:
     - include_vars: ../vars/vars.yml
 
-    - name: Verify if service exists
-      docker_swarm_info:
-        services_filters:
-          name: "{{ service_name }}"
-        services: yes
-      register: swarm_service
-
     - name: Create Docker service
       docker_swarm_service:
         name: "{{ service_name }}"
@@ -69,7 +62,7 @@
     - name: generate a nginx conf file
       template:
         src: "~/devops/templates/nginx-v2.conf.j2"
-        dest: /nginx/conf.d/hasura.conf
+        dest: /nginx/conf.d/{{ service_name }}.conf
 
     - name: Run nginx reload command on every running nginx container
       shell: |
