@@ -1,4 +1,4 @@
 project: "bot"
-env: "prod"
+env: "dev"
 identifier: "{{ project }}-{{ env }}"
 org: "samagra-bot"

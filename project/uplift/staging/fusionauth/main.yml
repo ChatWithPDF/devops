@@ -116,7 +116,7 @@
     - name: generate a nginx conf file
       template:
         src: "{{ playbook_dir }}/nginx.conf.j2"
-        dest: /nginx/conf.d/{ service_name }.conf
+        dest: "/nginx/conf.d/{{ service_name }}.conf"
 
     - name: Run nginx reload command on every running nginx container
       shell: |

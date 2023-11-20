@@ -2,81 +2,91 @@
   hosts: _manual
   become: true
   vars:
-    vault_secrets: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/fusionauth_db') }}"
+    vault_secrets: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/bff_timescaledb') }}"
   tasks:
     - include_vars: ../vars/vars.yml
 
     - name: Create a bff dir if it does not exist
       ansible.builtin.file:
-        path: "/{{ identifier }}-fusionauth"
+        path: "/{{ identifier }}-bff"
         state: directory
         mode: '0755'
 
     - name: Copy file from host to machine
       copy:
         src: "{{ playbook_dir }}/docker-compose.yml"
-        dest: "/{{ identifier }}-fusionauth/docker-compose.yml"
+        dest: "/{{ identifier }}-bff/docker-compose.yml"
+        force: yes
 
 
     - name: Generate .env file from vault lookup
       copy:
-        dest: "/{{ identifier }}-fusionauth/.env"
+        dest: "/{{ identifier }}-bff/.env"
         content: |
           {% for key, value in vault_secrets.items() %}
           {{ key }}={{ value }}
-          {% endfor %}
+          {% endfor %}          
 
     - name: Create and start services
       community.docker.docker_compose:
-        project_src: "/{{ identifier }}-fusionauth/"
-        env_file: "/{{ identifier }}-fusionauth/.env"
+        project_src: "/{{ identifier }}-bff/"
+        env_file: "/{{ identifier }}-bff/.env"
       register: output
 
     - debug:
         var: output
 
-- name: Pull latest image for fusionauth
+- name: Pull latest image for bff
   hosts: _worker:_manager:_worker_gpu
   become: true
   vars:
-    image_name: fusionauth/fusionauth-app
-    image_tag: latest
+    image_name: "ghcr.io/{{ org }}/bff"
+    image_tag: "{{ env }}"
   tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Login to Github Packages Registry
+      community.docker.docker_login:
+        registry_url: ghcr.io/
+        username: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/common:GITHUB_USERNAME') }}"
+        password: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/common:GITHUB_TOKEN') }}"
+
     - name: pull an image
       docker_image:
-        name: "{{ image_name }}:{{ image_tag }}"
+        name: "{{ image_name }}:{{ env }}"
         source: "pull"
         force_source: yes
       register: output
+      
 
     - debug:
         var: output
-
+    
 - name: Create Docker service on Swarm cluster
   hosts: _manager
   become: true
   vars:
-    service_name: "{{ identifier }}-fusionauth"
-    image_name: fusionauth/fusionauth-app
-    image_tag: latest
+    service_name: "{{ identifier }}-bff"
+    image_name: "ghcr.io/{{ org }}/bff"
+    image_tag: "{{ env }}"
     replicas: 1
-    container_port: 9011
+    container_port: 3000
   tasks:
     - include_vars: ../vars/vars.yml
 
     - name: Create Docker service
       docker_swarm_service:
         name: "{{ service_name }}"
-        image: "{{ image_name }}:{{ image_tag }}"
+        image: "{{ image_name }}:{{ env }}"
         replicas: "{{ replicas }}"
+        networks:
+          - communication
         placement:
           constraints:
             - node.role == worker
         force_update: yes
-        networks:
-          - communication
         env:
-          "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/fusionauth') }}"
+          "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/bff') }}"
         state: present
 
     - name: Register middleware host with variable
@@ -90,17 +100,17 @@
         timeout: 5
       delegate_to: localhost
 
-- name: Setup nginx config for fusionauth
+- name: Setup nginx config for bff
   hosts: _manager:_worker:_worker_gpu
   become: true
   vars:
     service_name: "{{ hostvars['MIDDLEWARE_HOST']['service_name'] }}"
-    upstream: true
     service_port: "{{ hostvars['MIDDLEWARE_HOST']['container_port'] }}"
+    upstream: true
     proxy_address: "http://{{ service_name }}"
-    config: ["proxy_set_header Host $host;","proxy_set_header X-Real-IP $remote_addr;","proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;", "proxy_set_header X-Forwarded-Proto https;", "proxy_set_header X-Forwarded-Port 443;"]
+    config: ["client_max_body_size 100M;", "proxy_read_timeout 600;", "proxy_connect_timeout 600;", "proxy_send_timeout 600;"]
     use_https: true
-  tasks:
+  tasks: 
     - name: Create a /nginx directory
       ansible.builtin.file:
         path: /nginx
@@ -115,8 +125,8 @@
 
     - name: generate a nginx conf file
       template:
-        src: "{{ playbook_dir }}/nginx.conf.j2"
-        dest: "/nginx/conf.d/{{ service_name }}.conf"
+        src: "~/devops/templates/nginx-v2.conf.j2"
+        dest: /nginx/conf.d/{{ service_name }}.conf
 
     - name: Run nginx reload command on every running nginx container
       shell: |

@@ -40,8 +40,8 @@
   hosts: _worker:_manager:_worker_gpu
   become: true
   vars:
-    image_name: ghcr.io/chatwithpdf/bff
-    image_tag: "{{ tag }}"
+    image_name: "ghcr.io/{{ org }}/bff"
+    image_tag: "{{ env }}"
   tasks:
     - include_vars: ../vars/vars.yml
 
@@ -53,7 +53,7 @@
 
     - name: pull an image
       docker_image:
-        name: "{{ image_name }}:{{ tag }}"
+        name: "{{ image_name }}:{{ env }}"
         source: "pull"
         force_source: yes
       register: output
@@ -67,8 +67,8 @@
   become: true
   vars:
     service_name: "{{ identifier }}-bff"
-    image_name: ghcr.io/chatwithpdf/bff
-    image_tag: "{{ tag }}"
+    image_name: "ghcr.io/{{ org }}/bff"
+    image_tag: "{{ env }}"
     replicas: 1
     container_port: 3000
   tasks:
@@ -77,13 +77,13 @@
     - name: Create Docker service
       docker_swarm_service:
         name: "{{ service_name }}"
-        image: "{{ image_name }}:{{ tag }}"
+        image: "{{ image_name }}:{{ env }}"
         replicas: "{{ replicas }}"
         networks:
           - communication
         placement:
           constraints:
-            - node.role == worker
+            - node.labels.node_vm_type == gpu
         force_update: yes
         env:
           "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/bff') }}"
