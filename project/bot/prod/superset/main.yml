@@ -2,6 +2,8 @@
   hosts: _manual
   become: true
   tasks:
+    - include_vars: ../vars/vars.yml    
+
     - name: Copy Superset Directory
       copy:
         src: "{{ playbook_dir }}"
@@ -11,6 +13,8 @@
   hosts: _manual
   become: true
   tasks:
+    - include_vars: ../vars/vars.yml    
+
     - name: Deploy Superset on Stateful VM
       community.docker.docker_compose:
         project_src: "/{{ identifier }}-superset/"
