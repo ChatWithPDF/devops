@@ -1,0 +1,17 @@
+- name: Copy Superset Directory
+  hosts: _manual
+  become: true
+  tasks:
+    - name: Copy Superset Directory
+      copy:
+        src: "{{ playbook_dir }}"
+        dest: "/${identifier}-superset"
+
+- name: Deployment for Stateful VM
+  hosts: _manual
+  become: true
+  tasks:
+    - name: Deploy Superset on Stateful VM
+      community.docker.docker_compose:
+        project_src: "/${identifier}-superset/"
+      register: output
