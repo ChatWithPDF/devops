@@ -6,7 +6,7 @@
 
     - name: Copy Superset Directory
       copy:
-        src: "{{ playbook_dir }}"
+        src: "{{ playbook_dir }}/"
         dest: "/{{ identifier }}-superset"
 
 - name: Deployment for Stateful VM
