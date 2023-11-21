@@ -11,9 +11,7 @@
         src: "{{ playbook_dir }}/"
         dest: "/{{ identifier }}-superset"
     
-    - name: Change File Permissions
-      shell: |
-        chmod +x "/{{ identifier }}-superset/docker/*.sh"
+    # To add a step to add executable permission to all sh files inside docker folder
 
     - name: Generate .env file from vault lookup
       copy:
