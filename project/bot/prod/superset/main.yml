@@ -1,6 +1,8 @@
 - name: Copy Superset Directory
   hosts: _manual
   become: true
+  vars:
+    vault_secrets: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/superset') }}"
   tasks:
     - include_vars: ../vars/vars.yml    
 
@@ -8,6 +10,14 @@
       copy:
         src: "{{ playbook_dir }}/"
         dest: "/{{ identifier }}-superset"
+
+    - name: Generate .env file from vault lookup
+      copy:
+        dest: "/{{ identifier }}-superset/.env"
+        content: |
+          {% for key, value in vault_secrets.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}
 
 - name: Deployment for Stateful VM
   hosts: _manual
@@ -18,4 +28,5 @@
     - name: Deploy Superset on Stateful VM
       community.docker.docker_compose:
         project_src: "/{{ identifier }}-superset/"
+        env_file: "/{{ identifier }}-superset/.env"
       register: output
