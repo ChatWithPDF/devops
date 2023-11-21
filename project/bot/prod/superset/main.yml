@@ -10,6 +10,10 @@
       copy:
         src: "{{ playbook_dir }}/"
         dest: "/{{ identifier }}-superset"
+    
+    - name: Change File Permissions
+      shell: |
+        chmod +x "/{{ identifier }}-superset/docker/*.sh"
 
     - name: Generate .env file from vault lookup
       copy:
@@ -18,6 +22,11 @@
           {% for key, value in vault_secrets.items() %}
           {{ key }}={{ value }}
           {% endfor %}
+    
+    - name: Register middleware host with variable
+      add_host:
+        name: "MIDDLEWARE_HOST"
+        MANUAL_MACHINE_IP: "{{ ansible_default_ipv4.address }}"
 
 - name: Deployment for Stateful VM
   hosts: _manual
@@ -30,3 +39,39 @@
         project_src: "/{{ identifier }}-superset/"
         env_file: "/{{ identifier }}-superset/.env"
       register: output
+
+- name: Setup nginx config for cdn api
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    service_name: "{{ identifier }}-superset"
+    upstream: false
+    proxy_address: "http://{{ hostvars['MIDDLEWARE_HOST']['MANUAL_MACHINE_IP'] }}:8088"
+    config: ["proxy_set_header Host $host;", "proxy_set_header X-Forwarded-For $remote_addr;", "client_max_body_size 100M;", "proxy_read_timeout 600;", "proxy_connect_timeout 600;", "proxy_send_timeout 600;", proxy_http_version 1.1;, proxy_set_header Upgrade $http_upgrade;, proxy_set_header Connection "upgrade";]
+    use_https: true
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: generate a nginx conf file
+      template:
+        src: "~/devops/templates/nginx-v2.conf.j2"
+        dest: "/nginx/conf.d/{{ service_name }}.conf"
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+      ignore_errors: yes
+
+
