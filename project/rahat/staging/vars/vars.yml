@@ -1,0 +1,4 @@
+project: "rahatbot"
+env: "dev"
+identifier: "{{ project }}-{{ env }}"
+org: "rahatbot"
