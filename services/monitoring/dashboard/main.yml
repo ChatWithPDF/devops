@@ -25,7 +25,7 @@
     service_port: "3000"
     upstream: true
     proxy_address: "http://{{ service_name }}"
-    config: ["proxy_set_header Host $http_host;""]
+    config: ["proxy_set_header Host $http_host;"]
     use_https: true
   tasks: 
     - name: Create a /nginx directory
