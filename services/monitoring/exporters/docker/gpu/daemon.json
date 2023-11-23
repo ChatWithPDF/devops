@@ -6,14 +6,13 @@
         "runtimeArgs": []
       }
     },
-    "debug" : true,
     "log-driver": "loki",
     "log-opts": {
         "loki-url": "http://10.4.1.6:3100/loki/api/v1/push",
         "loki-batch-size": "400",
-        "loki-retries": 5,
+        "loki-retries": "5",
         "loki-timeout": "1s",
-        "keep-file": true,
+        "keep-file": "true",
         "loki-max-backoff":"800ms"
     }
   }
