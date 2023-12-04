@@ -5,12 +5,13 @@ services:
     image: samagragovernance/postgres:latest-pg15
     restart: always
     ports:
-      - "5438:5432"
+      - "5432:5432"
     volumes:
-      - db:/var/lib/postgresql/data
+      - bff_bff_pgdata:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
 
 volumes:
-  db:
+  bff_bff_pgdata:
+    external: true

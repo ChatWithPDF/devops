@@ -4,7 +4,7 @@ services:
     container_name: "${identifier}-fa-db"
     image: postgres:12.9
     ports:
-      - "5439:5432"
+      - "5433:5432"
     environment:
       PGDATA: /var/lib/postgresql/data/pgdata
       POSTGRES_USER: ${POSTGRES_USER}
@@ -16,13 +16,13 @@ services:
       retries: 5
     restart: always
     volumes:
-      - db:/var/lib/postgresql/data
+      - fusionauth_fusionauth_db_data:/var/lib/postgresql/data
 
   es:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.0
     container_name: "${identifier}-fusionauth-es"
     ports:
-      - "9201:9200"
+      - "9200:9200"
     environment:
       cluster.name: "${identifier}-fusionauth"
       bootstrap.memory_lock: "true"
@@ -54,8 +54,10 @@ services:
         limits:
           memory: 1GB
     volumes:
-      - es:/usr/share/elasticsearch/data
+      - fusionauth_fusionauth_search_data:/usr/share/elasticsearch/data
 
 volumes:
-  db:
-  es:
+  fusionauth_fusionauth_db_data:
+    external: true
+  fusionauth_fusionauth_search_data:
+    external: true
