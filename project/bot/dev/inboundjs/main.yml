@@ -4,7 +4,7 @@
   vars:
     service_name: "{{ identifier }}-inboundjs"
     image_name: ghcr.io/samagra-comms/inbound-js
-    image_tag: {{ env }}
+    image_tag: "{{ env }}"
     replicas: 1
     container_port: 3000
   tasks:
