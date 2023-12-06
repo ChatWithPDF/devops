@@ -1,0 +1,16 @@
+version: '3.6'
+services:
+  db:
+    container_name: "${identifier}-bff-db"
+    image: samagragovernance/postgres:latest-pg15
+    restart: always
+    ports:
+      - "5442:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+volumes:
+  db:

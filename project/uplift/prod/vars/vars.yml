@@ -1,0 +1,4 @@
+project: "uplift"
+env: "prod"
+identifier: "{{ project }}-{{ env }}"
+org: "up-lift"
