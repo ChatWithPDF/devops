@@ -3,8 +3,8 @@
   become: true
   vars:
     service_name: "{{ identifier }}-user-service"
-    image_name: samagragovernance/esamwad-user-service
-    image_tag: latest
+    image_name: ghcr.io/amruth-vamshi/user-service
+    image_tag: master
     replicas: 1
     container_port: 3000
   tasks:
