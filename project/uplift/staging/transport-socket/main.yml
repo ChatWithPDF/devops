@@ -1,6 +1,8 @@
 - name: Setup stateful services
   hosts: _manual
   become: true
+  vars:
+    vault_secrets: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/ts') }}"
   tasks:
     - include_vars: ../vars/vars.yml    
 
@@ -10,10 +12,19 @@
         state: directory
         mode: '0755'
 
+    - name: Generate .env file from vault lookup
+      copy:
+        dest: "/{{ identifier }}-ts/.env"
+        content: |
+          {% for key, value in vault_secrets.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}   
+
     - name: Copy file from host to machine
       copy:
         src: "{{ playbook_dir }}/docker-compose.yml"
         dest: "/{{ identifier }}-ts/docker-compose.yml"
+        env_file: "/{{ identifier }}-ts/.env"
 
     - name: Create and start services
       community.docker.docker_compose:
