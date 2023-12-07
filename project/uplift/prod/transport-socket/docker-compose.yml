@@ -1,7 +1,7 @@
 version: '3.6'
 services:
   ts-redis:
-    container_name: ts-redis
+    container_name: "${identifier}-ts-redis"
     image: redis:latest
     ports:
       - '6380:6379'
@@ -12,5 +12,5 @@ services:
       - ts_redis_conf:/usr/local/etc/redis/redis.conf
 
 volumes:
- ts_redis:
- ts_redis_conf:
+ redis:
+ redis_conf:
