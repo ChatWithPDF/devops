@@ -1,0 +1,4 @@
+project: "pmkisan"
+env: "dev"
+identifier: "{{ project }}-{{ env }}"
+org: "amruth-vamshi"
