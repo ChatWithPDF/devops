@@ -30,7 +30,7 @@ services:
       - redis
     volumes:
       - ./docker:/app/docker
-      - supserset:/app/superset_home
+      - superset:/app/superset_home
 
   superset-init:
     image: apachesuperset.docker.scarf.sh/apache/superset:${TAG:-latest-dev}
@@ -43,7 +43,7 @@ services:
     user: "root"
     volumes: 
       - ./docker:/app/docker
-      - supserset:/app/superset_home
+      - superset:/app/superset_home
     healthcheck:
       disable: true
 
@@ -59,7 +59,7 @@ services:
     user: "root"
     volumes: 
       - ./docker:/app/docker
-      - supserset:/app/superset_home
+      - superset:/app/superset_home
     healthcheck:
       test:
         [
@@ -79,7 +79,7 @@ services:
     user: "root"
     volumes: 
       - ./docker:/app/docker
-      - supserset:/app/superset_home
+      - superset:/app/superset_home
     healthcheck:
       disable: true
 
