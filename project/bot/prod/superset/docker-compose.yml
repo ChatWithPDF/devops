@@ -5,7 +5,7 @@ services:
     container_name: "${identifier}-superset-redis"
     restart: unless-stopped
     volumes:
-      - redis:/data
+      - "${identifier}-redis":/data
 
   db:
     env_file: docker/.env-non-dev
@@ -13,7 +13,7 @@ services:
     container_name: "${identifier}-superset-db"
     restart: unless-stopped
     volumes:
-      - db:/var/lib/postgresql/data
+      - "${identifier}-db":/var/lib/postgresql/data
       - /${identifier}-superset/docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
 
   superset:
@@ -30,7 +30,7 @@ services:
       - redis
     volumes:
       - ./docker:/app/docker
-      - superset:/app/superset_home
+      - "${identifier}-supserset":/app/superset_home
 
   superset-init:
     image: apachesuperset.docker.scarf.sh/apache/superset:${TAG:-latest-dev}
@@ -43,7 +43,7 @@ services:
     user: "root"
     volumes: 
       - ./docker:/app/docker
-      - superset:/app/superset_home
+      - "${identifier}-supserset":/app/superset_home
     healthcheck:
       disable: true
 
@@ -59,7 +59,7 @@ services:
     user: "root"
     volumes: 
       - ./docker:/app/docker
-      - superset:/app/superset_home
+      - "${identifier}-supserset":/app/superset_home
     healthcheck:
       test:
         [
@@ -79,11 +79,14 @@ services:
     user: "root"
     volumes: 
       - ./docker:/app/docker
-      - superset:/app/superset_home
+      - "${identifier}-supserset":/app/superset_home
     healthcheck:
       disable: true
 
 volumes:
   superset:
+    name: "${identifier}-supserset"
   db:
+    name: "${identifier}-db"
   redis:
+    name: "${identifier}-redis"
