@@ -85,8 +85,8 @@ services:
 
 volumes:
   superset:
-    name: ${identifier}-supserset
+    name: ${identifier}-superset-supserset
   db:
-    name: ${identifier}-db
+    name: ${identifier}-superset-db
   redis:
-    name: ${identifier}-redis
+    name: ${identifier}-superset-redis
