@@ -23,7 +23,7 @@ x-superset-volumes:
   - ./docker:/app/docker
   - superset:/app/superset_home
 
-version: "3.7"
+version: "3.6"
 services:
   redis:
     image: redis:7
