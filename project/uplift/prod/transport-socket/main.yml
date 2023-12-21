@@ -39,8 +39,8 @@
   become: true
   vars:
     service_name: "{{ identifier }}-ts"
-    image_name: ghcr.io/samagra-comms/transport-socket
-    image_tag: akai
+    image_name: ghcr.io/up-lift/transport-socket
+    image_tag: prod
     replicas: 1
     container_port: 3000
   tasks:
