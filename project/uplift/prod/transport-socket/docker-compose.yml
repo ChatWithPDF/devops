@@ -8,8 +8,8 @@ services:
     command: [ 'redis-server', '--appendonly', 'yes' ]
     hostname: redis
     volumes:
-      - ts_redis:/data
-      - ts_redis_conf:/usr/local/etc/redis/redis.conf
+      - redis:/data
+      - redis_conf:/usr/local/etc/redis/redis.conf
 
 volumes:
  redis:

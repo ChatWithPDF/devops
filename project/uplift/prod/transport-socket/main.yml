@@ -24,11 +24,11 @@
       copy:
         src: "{{ playbook_dir }}/docker-compose.yml"
         dest: "/{{ identifier }}-ts/docker-compose.yml"
-        env_file: "/{{ identifier }}-ts/.env"
 
     - name: Create and start services
       community.docker.docker_compose:
         project_src: "/{{ identifier }}-ts/"
+        env_file: "/{{ identifier }}-ts/.env"
       register: output
 
     - debug:
