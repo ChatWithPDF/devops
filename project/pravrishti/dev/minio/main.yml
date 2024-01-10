@@ -1,0 +1,107 @@
+- name: Setup stateful services
+  hosts: _manual
+  become: true
+  vars:
+    vault_secrets: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/minio') }}"
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create a minio dir if it does not exist
+      ansible.builtin.file:
+        path: "/{{ identifier }}-minio"
+        state: directory
+        mode: "0755"
+
+    - name: Copy file from host to machine
+      copy:
+        src: "{{ playbook_dir }}/docker-compose.yml"
+        dest: "/{{ identifier }}-minio/docker-compose.yml"
+
+    - name: Generate .env file from vault lookup
+      copy:
+        dest: "/{{ identifier }}-minio/.env"
+        content: |
+          {% for key, value in vault_secrets.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}
+
+    - name: Create and start services
+      community.docker.docker_compose:
+        project_src: "/{{ identifier }}-minio/"
+      register: output
+
+    - debug:
+        var: output
+
+    - name: Register middleware host with variable
+      add_host:
+        name: "MIDDLEWARE_HOST"
+        MANUAL_MACHINE_IP: "{{ ansible_default_ipv4.address }}"
+
+- name: Setup nginx config for cdn api
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    service_name: "{{ identifier }}-cdn-api"
+    upstream: false
+    proxy_address: "http://{{ hostvars['MIDDLEWARE_HOST']['MANUAL_MACHINE_IP'] }}:9013"
+    config: ["proxy_set_header Host $host;", "proxy_set_header X-Forwarded-For $remote_addr;", "client_max_body_size 100M;", "proxy_read_timeout 600;", "proxy_connect_timeout 600;", "proxy_send_timeout 600;", proxy_http_version 1.1;, proxy_set_header Upgrade $http_upgrade;, proxy_set_header Connection "upgrade";]
+    use_https: true
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: generate a nginx conf file
+      template:
+        src: "~/devops/templates/nginx-v2.conf.j2"
+        dest: "/nginx/conf.d/{{ service_name }}.conf"
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+      ignore_errors: yes
+
+- name: Setup nginx config for cdn 
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    service_name: "{{ identifier }}-cdn"
+    upstream: false
+    proxy_address: "http://{{ hostvars['MIDDLEWARE_HOST']['MANUAL_MACHINE_IP'] }}:9014"
+    config: ["proxy_set_header Host $host;", "proxy_set_header X-Forwarded-For $remote_addr;", "client_max_body_size 100M;", "proxy_read_timeout 600;", "proxy_connect_timeout 600;", "proxy_send_timeout 600;", proxy_http_version 1.1;, proxy_set_header Upgrade $http_upgrade;, proxy_set_header Connection "upgrade";]
+    use_https: true
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: generate a nginx conf file
+      template:
+        src: "~/devops/templates/nginx-v2.conf.j2"
+        dest: "/nginx/conf.d/{{ service_name }}.conf"
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+      ignore_errors: yes
