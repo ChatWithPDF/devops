@@ -2,7 +2,7 @@ version: '3.6'
 services:
   db:
     container_name: "${identifier}-bff-db"
-    image: postgres:15-alpine
+    image: samagragovernance/postgres:1.0.1-pg15
     restart: always
     ports:
       - "5446:5432"
