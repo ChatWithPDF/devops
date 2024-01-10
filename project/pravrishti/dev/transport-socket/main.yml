@@ -39,7 +39,7 @@
   become: true
   vars:
     service_name: "{{ identifier }}-ts"
-    image_name: ghcr.io/up-lift/transport-socket
+    image_name: ghcr.io/{{ org }}/transport-socket
     image_tag: dev
     replicas: 1
     container_port: 3000
