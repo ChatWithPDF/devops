@@ -1,0 +1,123 @@
+- name: Setup stateful services
+  hosts: _manual
+  become: true
+  vars:
+    vault_secrets: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/fusionauth_db') }}"
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create a bff dir if it does not exist
+      ansible.builtin.file:
+        path: "/{{ identifier }}-fusionauth"
+        state: directory
+        mode: '0755'
+
+    - name: Copy file from host to machine
+      copy:
+        src: "{{ playbook_dir }}/docker-compose.yml"
+        dest: "/{{ identifier }}-fusionauth/docker-compose.yml"
+
+
+    - name: Generate .env file from vault lookup
+      copy:
+        dest: "/{{ identifier }}-fusionauth/.env"
+        content: |
+          {% for key, value in vault_secrets.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}
+
+    - name: Create and start services
+      community.docker.docker_compose:
+        project_src: "/{{ identifier }}-fusionauth/"
+        env_file: "/{{ identifier }}-fusionauth/.env"
+      register: output
+
+    - debug:
+        var: output
+
+- name: Pull latest image for fusionauth
+  hosts: _worker:_manager:_worker_gpu
+  become: true
+  vars:
+    image_name: fusionauth/fusionauth-app
+    image_tag: latest
+  tasks:
+    - name: pull an image
+      docker_image:
+        name: "{{ image_name }}:{{ image_tag }}"
+        source: "pull"
+        force_source: yes
+      register: output
+
+    - debug:
+        var: output
+
+- name: Create Docker service on Swarm cluster
+  hosts: _manager
+  become: true
+  vars:
+    service_name: "{{ identifier }}-fusionauth"
+    image_name: fusionauth/fusionauth-app
+    image_tag: latest
+    replicas: 1
+    container_port: 9011
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create Docker service
+      docker_swarm_service:
+        name: "{{ service_name }}"
+        image: "{{ image_name }}:{{ image_tag }}"
+        replicas: "{{ replicas }}"
+        placement:
+          constraints:
+            - node.role == worker
+        force_update: yes
+        networks:
+          - communication
+        env:
+          "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/fusionauth') }}"
+        state: present
+
+    - name: Register middleware host with variable
+      add_host:
+        name: "MIDDLEWARE_HOST"
+        service_name: "{{ service_name }}"
+        container_port: "{{ container_port }}"
+
+    - name: Sleep for 5 seconds and continue with play
+      ansible.builtin.wait_for:
+        timeout: 5
+      delegate_to: localhost
+
+- name: Setup nginx config for fusionauth
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    service_name: "{{ hostvars['MIDDLEWARE_HOST']['service_name'] }}"
+    upstream: true
+    service_port: "{{ hostvars['MIDDLEWARE_HOST']['container_port'] }}"
+    proxy_address: "http://{{ service_name }}"
+    use_https: true
+  tasks:
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: generate a nginx conf file
+      template:
+        src: "{{ playbook_dir }}/nginx.conf.j2"
+        dest: "/nginx/conf.d/{{ service_name }}.conf"
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+      ignore_errors: yes
