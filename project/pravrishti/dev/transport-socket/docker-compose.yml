@@ -1,0 +1,16 @@
+version: '3.6'
+services:
+  ts-redis:
+    container_name: "${identifier}-ts-redis"
+    image: redis:latest
+    ports:
+      - '6381:6379'
+    command: [ 'redis-server', '--appendonly', 'yes' ]
+    hostname: redis
+    volumes:
+      - redis:/data
+      - redis_conf:/usr/local/etc/redis/redis.conf
+
+volumes:
+ redis:
+ redis_conf:
