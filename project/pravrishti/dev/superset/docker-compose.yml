@@ -4,6 +4,8 @@ services:
     image: redis:7
     container_name: "${identifier}-superset-redis"
     restart: unless-stopped
+    networks:
+      - bridge
     volumes:
       - redis:/data
 
@@ -12,6 +14,8 @@ services:
     image: postgres:15
     container_name: "${identifier}-superset-db"
     restart: unless-stopped
+    networks:
+      - bridge
     volumes:
       - db:/var/lib/postgresql/data
       - /${identifier}-superset/docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
@@ -22,6 +26,8 @@ services:
     container_name: "${identifier}-superset-app"
     command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
     user: "root"
+    networks:
+      - bridge
     restart: unless-stopped
     ports:
       - 8090:8088
@@ -37,6 +43,8 @@ services:
     container_name: "${identifier}-superset-init"
     command: ["/app/docker/docker-init.sh"]
     env_file: docker/.env-non-dev
+    networks:
+      - bridge
     depends_on: 
       - db
       - redis
@@ -52,6 +60,8 @@ services:
     container_name: "${identifier}-superset-worker"
     command: ["/app/docker/docker-bootstrap.sh", "worker"]
     env_file: docker/.env-non-dev
+    networks:
+      - bridge
     restart: unless-stopped
     depends_on: 
       - db
@@ -73,6 +83,8 @@ services:
     command: ["/app/docker/docker-bootstrap.sh", "beat"]
     env_file: docker/.env-non-dev
     restart: unless-stopped
+    networks:
+      - bridge
     depends_on: 
       - db
       - redis
@@ -90,3 +102,8 @@ volumes:
     name: ${identifier}-superset-db
   redis:
     name: ${identifier}-superset-redis
+
+networks:
+  bridge:
+    name: bridge
+    external: true
