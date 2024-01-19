@@ -1,0 +1,134 @@
+- name: Setup stateful services
+  hosts: _manual
+  become: true
+  vars:
+    vault_secrets: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/uci-apis_timescaledb') }}"
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create a uci-apis dir if it does not exist
+      ansible.builtin.file:
+        path: "/{{ identifier }}-uci-apis"
+        state: directory
+        mode: '0755'
+
+    - name: Copy file from host to machine
+      copy:
+        src: "{{ playbook_dir }}/docker-compose.yml"
+        dest: "/{{ identifier }}-uci-apis/docker-compose.yml"
+        force: yes
+
+
+    - name: Generate .env file from vault lookup
+      copy:
+        dest: "/{{ identifier }}-uci-apis/.env"
+        content: |
+          {% for key, value in vault_secrets.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}          
+
+    - name: Create and start services
+      community.docker.docker_compose:
+        project_src: "/{{ identifier }}-uci-apis/"
+        env_file: "/{{ identifier }}-uci-apis/.env"
+      register: output
+
+    - debug:
+        var: output
+
+- name: Pull latest image for uci-apis
+  hosts: _worker:_manager:_worker_gpu
+  become: true
+  vars:
+    image_name: "ghcr.io/{{ org }}/uci-apis"
+    image_tag: "{{ env }}"
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Login to Github Packages Registry
+      community.docker.docker_login:
+        registry_url: ghcr.io/
+        username: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/common:GITHUB_USERNAME') }}"
+        password: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/common:GITHUB_TOKEN') }}"
+
+    - name: pull an image
+      docker_image:
+        name: "{{ image_name }}:{{ env }}"
+        source: "pull"
+        force_source: yes
+      register: output
+      
+
+    - debug:
+        var: output
+    
+- name: Create Docker service on Swarm cluster
+  hosts: _manager
+  become: true
+  vars:
+    service_name: "{{ identifier }}-uci-apis"
+    image_name: "ghcr.io/{{ org }}/uci-apis"
+    image_tag: "{{ env }}"
+    replicas: 1
+    container_port: 3000
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create Docker service
+      docker_swarm_service:
+        name: "{{ service_name }}"
+        image: "{{ image_name }}:{{ env }}"
+        replicas: "{{ replicas }}"
+        networks:
+          - communication
+        placement:
+          constraints:
+            - node.labels.node_vm_type == gpu
+        force_update: yes
+        env:
+          "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/uci-apis') }}"
+        state: present
+
+    - name: Register middleware host with variable
+      add_host:
+        name: "MIDDLEWARE"
+        service_name: "{{ service_name }}"
+        container_port: "{{ container_port }}"
+
+    - name: Sleep for 5 seconds and continue with play
+      ansible.builtin.wait_for:
+        timeout: 5
+      delegate_to: localhost
+
+- name: Setup nginx config for uci-apis
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    service_name: "pravrishti-dev-uci-apis"
+    service_port: "3000"
+    upstream: true
+    proxy_address: "http://{{ service_name }}"
+    config: []
+    use_https: true
+  tasks: 
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: generate a nginx conf file
+      template:
+        src: "~/devops/templates/nginx-v2.conf.j2"
+        dest: /nginx/conf.d/{{ service_name }}.conf
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+      ignore_errors: yes

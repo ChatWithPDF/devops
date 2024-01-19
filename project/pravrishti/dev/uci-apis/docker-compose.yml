@@ -1,0 +1,23 @@
+version: '3.6'
+services:
+  db:
+    container_name: "${identifier}-bff-db"
+    image: postgres:12.9
+    restart: always
+    networks:
+      - jenkins_default
+    ports:
+      - "5447:5432"
+    volumes:
+      - db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+volumes:
+  db:
+
+networks:
+  bridge:
+    name: jenkins_default
+    external: true
