@@ -2,7 +2,7 @@ version: '3.6'
 services:
   db:
     container_name: "${identifier}-uci-apis-db"
-    image: postgres:12.9
+    image: postgres:13
     restart: always
     networks:
       - bridge
