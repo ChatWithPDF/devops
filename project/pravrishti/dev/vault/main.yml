@@ -1,0 +1,95 @@
+- name: Setup stateful services
+  hosts: _manual
+  become: true
+  vars:
+    vault_secrets: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/uci-apis_timescaledb') }}"
+  tasks:
+    - include_vars: ../vars/vars.yml    
+
+    - name: Create a vault dir if it does not exist
+      ansible.builtin.file:
+        path: "/{{ identifier }}-vault"
+        state: directory
+        mode: "0755"
+
+    - name: Create a config dir if it does not exist
+      ansible.builtin.file:
+        path: "/{{ identifier }}-vault/volumes/config"
+        state: directory
+        mode: "0755"
+
+    - name: Create a file dir if it does not exist
+      ansible.builtin.file:
+        path: "/{{ identifier }}-vault/volumes/file"
+        state: directory
+        mode: "0755"
+
+    - name: Create a logs dir if it does not exist
+      ansible.builtin.file:
+        path: "/{{ identifier }}-vault/volumes/logs"
+        state: directory
+        mode: "0755"
+
+    - name: Copy file from host to machine
+      copy:
+        src: "{{ playbook_dir }}/docker-compose.yml"
+        dest: "/{{ identifier }}-vault/docker-compose.yml"
+    
+    - name: Generate .env file from vault lookup
+      copy:
+        dest: "/{{ identifier }}-vault/.env"
+        content: |
+          {% for key, value in vault_secrets.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}
+
+    - name: Copy file from host to machine
+      copy:
+        src: "{{ playbook_dir }}/vault.json"
+        dest: "/{{ identifier }}-vault/volumes/config/vault.json"
+
+    - name: Create and start services
+      community.docker.docker_compose:
+        project_src: "/{{ identifier }}-vault/."
+      register: output
+
+    - debug:
+        var: output
+
+    - name: Register middleware host with variable
+      add_host:
+        name: "MIDDLEWARE_HOST"
+        MANUAL_MACHINE_IP: "{{ ansible_default_ipv4.address }}"
+
+- name: Setup nginx config for Vault
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    service_name: "{{ identifier }}-vault"
+    upstream: false
+    proxy_address: "http://{{ hostvars['MIDDLEWARE_HOST']['MANUAL_MACHINE_IP'] }}:8201"
+    use_https: true
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: generate a nginx conf file
+      template:
+        src: "~/devops/templates/nginx-v2.conf.j2"
+        dest: "/nginx/conf.d/{{ service_name }}.conf"
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+

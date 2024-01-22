@@ -1,0 +1,22 @@
+version: '3.6'
+services:
+  vault:
+    image: vault:1.13.3
+    container_name: "${identifier}-vault"
+    ports:
+      - "8201:8200"
+    restart: always
+    networks:
+      - jenkins_default
+    volumes:
+      - /${identifier}-vault/volumes/logs:/vault/logs
+      - /${identifier}-vault/volumes/file:/vault/file
+      - /${identifier}-vault/volumes/config:/vault/config
+    cap_add:
+      - IPC_LOCK
+    entrypoint: vault server -config=/vault/config/vault.json
+
+networks:
+  bridge:
+    name: jenkins_default
+    external: true
