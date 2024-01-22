@@ -44,6 +44,7 @@
     service_name: "{{ hostvars['MIDDLEWARE_HOST']['service_name'] }}"
     service_port: "{{ hostvars['MIDDLEWARE_HOST']['container_port'] }}"
     proxy_address: "http://{{ service_name }}"
+    config: ["proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;"]
     upstream: true
     use_https: true
   tasks:
