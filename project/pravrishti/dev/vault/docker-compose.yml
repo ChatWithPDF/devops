@@ -7,7 +7,7 @@ services:
       - "8201:8200"
     restart: always
     networks:
-      - jenkins_default
+      - bridge
     volumes:
       - /${identifier}-vault/volumes/logs:/vault/logs
       - /${identifier}-vault/volumes/file:/vault/file

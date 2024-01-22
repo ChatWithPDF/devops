@@ -5,7 +5,7 @@ services:
     image: postgres:12.9
     restart: always
     networks:
-      - jenkins_default
+      - bridge
     ports:
       - "5447:5432"
     volumes:
@@ -13,6 +13,8 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+  
 
 volumes:
   db:
