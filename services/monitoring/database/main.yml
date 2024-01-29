@@ -15,3 +15,42 @@
       community.docker.docker_compose:
         project_src: /database/
       register: output
+
+    - name: Register middleware host with variable
+      add_host:
+        name: "MIDDLEWARE_HOST"
+        MANUAL_MACHINE_IP: "{{ ansible_default_ipv4.address }}"
+
+- name: Setup nginx config for Prometheus
+  hosts: _manager:_worker:_worker_gpu
+  become: true
+  vars:
+    service_name: "prometheus"
+    upstream: false
+    proxy_address: "http://{{ hostvars['MIDDLEWARE_HOST']['MANUAL_MACHINE_IP'] }}:9090"
+    use_https: true
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create a /nginx directory
+      ansible.builtin.file:
+        path: /nginx
+        state: directory
+        mode: '0755'
+
+    - name: Create a /nginx/conf.d directory
+      ansible.builtin.file:
+        path: /nginx/conf.d
+        state: directory
+        mode: '0755'
+
+    - name: generate a nginx conf file
+      template:
+        src: "~/devops/templates/nginx-v2.conf.j2"
+        dest: "/nginx/conf.d/{{ service_name }}.conf"
+
+    - name: Run nginx reload command on every running nginx container
+      shell: |
+        docker exec $(docker ps -q -f name=nginx) nginx -s reload
+
+
