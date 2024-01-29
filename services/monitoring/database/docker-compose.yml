@@ -8,6 +8,18 @@ services:
       - /database/loki:/etc/loki
       - loki:/loki
     command: -config.file=/etc/loki/loki-config.yaml
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - /database/prometheus:/etc/prometheus
+      - prometheus:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
   
 volumes:
   loki:
+  prometheus:
