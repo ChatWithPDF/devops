@@ -30,8 +30,6 @@
     proxy_address: "http://{{ hostvars['MIDDLEWARE_HOST']['MANUAL_MACHINE_IP'] }}:9090"
     use_https: true
   tasks:
-    - include_vars: ../vars/vars.yml
-
     - name: Create a /nginx directory
       ansible.builtin.file:
         path: /nginx
