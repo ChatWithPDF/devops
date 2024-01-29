@@ -3,6 +3,8 @@ services:
   promtail:
     image: grafana/promtail:latest
     container_name: promtail
+    networks:
+      - bridge
     volumes:
       - /var/log:/var/log
       - /exporters/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
@@ -14,6 +16,8 @@ services:
   nodeexporter:
     image: prom/node-exporter:v1.6.1
     container_name: nodeexporter
+    networks:
+      - bridge
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -30,6 +34,8 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.1
     container_name: cadvisor
+    networks:
+      - bridge
     privileged: true
     devices:
       - /dev/kmsg:/dev/kmsg
@@ -42,3 +48,8 @@ services:
       - /cgroup:/cgroup:ro
     deploy:
       mode: global
+
+networks:
+  bridge:
+    name: jenkins_default
+    external: true
