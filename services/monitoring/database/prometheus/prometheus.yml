@@ -4,8 +4,8 @@ global:
 scrape_configs:
   - job_name: 'nodeexporter'
     static_configs:
-      - targets: ['nodeexporter:9100', '10.4.1.5:9100']
+      - targets: ['nodeexporter:9100', '10.4.1.5:9100','10.4.1.4:9100','10.4.1.7:9100']
 
   - job_name: 'cadvisor'
     static_configs:
-      - targets: ['cadvisor:8080', '10.4.1.5:8082']
+      - targets: ['cadvisor:8080', '10.4.1.5:8082','10.4.1.4:8082','10.4.1.7:8082']
