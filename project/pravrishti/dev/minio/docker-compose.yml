@@ -3,6 +3,8 @@ services:
   minio:
     image: minio/minio
     restart: always
+    network:
+      - bridge
     ports:
       - "9013:9000"
       - "9014:9001"
@@ -15,3 +17,8 @@ services:
 
 volumes:
   minio:
+
+networks:
+  bridge:
+    name: jenkins_default
+    external: true
