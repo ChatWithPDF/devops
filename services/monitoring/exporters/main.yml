@@ -22,7 +22,7 @@
   tasks:
     - name: Deploy Exporters on Swarm
       docker_stack:
-        compose: "/exporters/docker-compose.yml"
+        compose: "/exporters/docker-compose.swarm.yml"
         name: exporters
         state: present
 
