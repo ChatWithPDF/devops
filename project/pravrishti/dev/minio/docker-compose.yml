@@ -3,7 +3,7 @@ services:
   minio:
     image: minio/minio
     restart: always
-    network:
+    networks:
       - bridge
     ports:
       - "9013:9000"
