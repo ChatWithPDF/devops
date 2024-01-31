@@ -37,7 +37,7 @@
         var: output
 
 - name: Pull latest image for pdf-parser
-  hosts: _worker:_manager:_worker_gpu
+  hosts: _worker_gpu
   become: true
   vars:
     image_name: "ghcr.io/{{ org }}/pdf-parser"
