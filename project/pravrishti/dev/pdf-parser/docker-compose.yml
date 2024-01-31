@@ -1,0 +1,23 @@
+version: '3'
+services:
+  redis:
+    container_name: "${identifier}-pdf-parser-redis"
+    image: redis:latest
+    networks:
+      - bridge
+    ports:
+      - '6382:6379'
+    command: [ 'redis-server', '--appendonly', 'yes' ]
+    hostname: redis
+    volumes:
+      - redis:/data
+      - redis_conf:/usr/local/etc/redis/redis.conf
+
+volumes:
+ redis:
+ redis_conf:
+
+networks:
+  bridge:
+    name: jenkins_default
+    external: true
