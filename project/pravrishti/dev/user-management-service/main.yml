@@ -4,7 +4,7 @@
   vars:
     service_name: "{{ identifier }}-user-management-service"
     image_name: "ghcr.io/{{ org }}/user-management-service"
-    image_tag: {{ env }}
+    image_tag: "{{ env }}"
     replicas: 1
     container_port: 3000
   tasks:
