@@ -11,6 +11,19 @@ services:
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  
+  redis:
+    container_name: "${identifier}-bff-redis"
+    image: redis:latest
+    ports:
+      - '6383:6379'
+    command: [ 'redis-server', '--appendonly', 'yes' ]
+    hostname: redis
+    volumes:
+      - redis:/data
+      - redis_conf:/usr/local/etc/redis/redis.conf
 
 volumes:
   db:
+  redis:
+  redis_conf:
