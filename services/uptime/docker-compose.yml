@@ -3,6 +3,8 @@ services:
   uptime:
     container_name: uptime
     image: louislam/uptime-kuma
+    networks:
+      - bridge
     restart: always
     ports:
       - "3001:3001"
@@ -11,3 +13,8 @@ services:
 
 volumes:
   uptime-data:
+
+networks:
+  bridge:
+    name: jenkins_default
+    external: true
