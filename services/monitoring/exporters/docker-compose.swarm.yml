@@ -16,11 +16,13 @@ services:
   nodeexporter:
     image: prom/node-exporter:v1.6.1
     container_name: nodeexporter
-    network_mode: "host"
     networks:
       - bridge
     ports:
-      - 9100:9100
+      - target: 9100
+        published: 9100
+        protocol: tcp
+        mode: host
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -37,12 +39,14 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.1
     container_name: cadvisor
-    network_mode: "host"
     networks:
       - bridge
     privileged: true
     ports:
-      - 8082:8080
+      - target: 8080
+        published: 8082
+        protocol: tcp
+        mode: host
     devices:
       - /dev/kmsg:/dev/kmsg
     restart: always
