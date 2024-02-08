@@ -16,6 +16,7 @@ services:
   nodeexporter:
     image: prom/node-exporter:v1.6.1
     container_name: nodeexporter
+    network_mode: "host"
     networks:
       - bridge
     ports:
@@ -36,6 +37,7 @@ services:
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.1
     container_name: cadvisor
+    network_mode: "host"
     networks:
       - bridge
     privileged: true
