@@ -24,7 +24,7 @@
     - name: Register middleware host with variable
       add_host:
         name: "MIDDLEWARE_HOST"
-        SERVER_NAME: "uptime.*"
+        SERVER_NAME: "status.*"
         PROXY_ADDRESS: "http://{{ ansible_default_ipv4.address }}:3001"
 
 - name: Setup nginx config for jenkins
