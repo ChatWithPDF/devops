@@ -1,0 +1,109 @@
+version: "3.6"
+services:
+  redis:
+    image: redis:7
+    container_name: "${identifier}-superset-redis"
+    networks:
+      - bridge
+    restart: unless-stopped
+    volumes:
+      - redis:/data
+
+  db:
+    env_file: docker/.env-non-dev
+    image: postgres:15
+    container_name: "${identifier}-superset-db"
+    networks:
+      - bridge
+    restart: unless-stopped
+    volumes:
+      - db:/var/lib/postgresql/data
+      - /${identifier}-superset/docker/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+
+  superset:
+    env_file: docker/.env-non-dev
+    image: samagragovernance/superset:0.0.1
+    container_name: "${identifier}-superset-app"
+    command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
+    networks:
+      - bridge
+    user: "root"
+    restart: unless-stopped
+    ports:
+      - 8091:8088
+    depends_on: 
+      - db
+      - redis
+    volumes:
+      - ./docker:/app/docker
+      - superset:/app/superset_home
+
+  superset-init:
+    image: samagragovernance/superset:0.0.1
+    container_name: "${identifier}-superset-init"
+    networks:
+      - bridge
+    command: ["/app/docker/docker-init.sh"]
+    env_file: docker/.env-non-dev
+    depends_on: 
+      - db
+      - redis
+    user: "root"
+    volumes: 
+      - ./docker:/app/docker
+      - superset:/app/superset_home
+    healthcheck:
+      disable: true
+
+  superset-worker:
+    image: samagragovernance/superset:0.0.1
+    container_name: "${identifier}-superset-worker"
+    command: ["/app/docker/docker-bootstrap.sh", "worker"]
+    networks:
+      - bridge
+    env_file: docker/.env-non-dev
+    restart: unless-stopped
+    depends_on: 
+      - db
+      - redis
+    user: "root"
+    volumes: 
+      - ./docker:/app/docker
+      - superset:/app/superset_home
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "celery -A superset.tasks.celery_app:app inspect ping -d celery@$$HOSTNAME",
+        ]
+
+  superset-worker-beat:
+    image: samagragovernance/superset:0.0.1
+    container_name: "${identifier}-superset-worker-beat"
+    command: ["/app/docker/docker-bootstrap.sh", "beat"]
+    networks:
+      - bridge
+    env_file: docker/.env-non-dev
+    restart: unless-stopped
+    depends_on: 
+      - db
+      - redis
+    user: "root"
+    volumes: 
+      - ./docker:/app/docker
+      - superset:/app/superset_home
+    healthcheck:
+      disable: true
+
+volumes:
+  superset:
+    name: ${identifier}-superset-supserset
+  db:
+    name: ${identifier}-superset-db
+  redis:
+    name: ${identifier}-superset-redis
+
+networks:
+  bridge:
+    name: jenkins_default
+    external: true
