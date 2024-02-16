@@ -18,7 +18,7 @@ services:
 
   superset:
     env_file: docker/.env-non-dev
-    image: apachesuperset.docker.scarf.sh/apache/superset:${TAG:-latest-dev}
+    image: samagragovernance/superset:0.0.1
     container_name: "${identifier}-superset-app"
     command: ["/app/docker/docker-bootstrap.sh", "app-gunicorn"]
     user: "root"
@@ -33,7 +33,7 @@ services:
       - superset:/app/superset_home
 
   superset-init:
-    image: apachesuperset.docker.scarf.sh/apache/superset:${TAG:-latest-dev}
+    image: samagragovernance/superset:0.0.1
     container_name: "${identifier}-superset-init"
     command: ["/app/docker/docker-init.sh"]
     env_file: docker/.env-non-dev
@@ -48,7 +48,7 @@ services:
       disable: true
 
   superset-worker:
-    image: apachesuperset.docker.scarf.sh/apache/superset:${TAG:-latest-dev}
+    image: samagragovernance/superset:0.0.1
     container_name: "${identifier}-superset-worker"
     command: ["/app/docker/docker-bootstrap.sh", "worker"]
     env_file: docker/.env-non-dev
@@ -68,7 +68,7 @@ services:
         ]
 
   superset-worker-beat:
-    image: apachesuperset.docker.scarf.sh/apache/superset:${TAG:-latest-dev}
+    image: samagragovernance/superset:0.0.1
     container_name: "${identifier}-superset-worker-beat"
     command: ["/app/docker/docker-bootstrap.sh", "beat"]
     env_file: docker/.env-non-dev
