@@ -1,0 +1,49 @@
+- name: Setup stateful services
+  hosts: _manager
+  become: true
+  vars:
+    vault_secrets: "{{ lookup('community.hashi_vault.hashi_vault', 'secret={{ identifier }}/data/app') }}"
+  tasks:
+    - include_vars: ../vars/vars.yml
+
+    - name: Create a bff dir if it does not exist
+      ansible.builtin.file:
+        path: "/{{ identifier }}-app"
+        state: directory
+        mode: '0755'
+
+    - name: Copy file from host to machine
+      copy:
+        src: "{{ playbook_dir }}/docker-compose.yml"
+        dest: "/{{ identifier }}-app/docker-compose.yml"
+        force: yes
+
+
+    - name: Generate .env file from vault lookup
+      copy:
+        dest: "/{{ identifier }}-app/.env"
+        content: |
+          {% for key, value in vault_secrets.items() %}
+          {{ key }}={{ value }}
+          {% endfor %}  
+
+    - name: Copy Set Env Script
+      copy:
+        src: ./set_env.sh
+        dest: "/{{ identifier }}-app/set_env.sh"
+
+    - name: Generate compose file with environment variables
+      shell: |
+        chmod +x set_env.sh
+        ./set_env.sh  
+
+- name: Deployment
+  hosts: _manager
+  become: true
+  tasks:
+    - name: Deploy app
+      docker_stack:
+        compose: "/{{ identifier }}-app/docker-compose.yml"
+        name: "{{ identifier }}-app"
+        with_registry_auth: true
+        state: present
