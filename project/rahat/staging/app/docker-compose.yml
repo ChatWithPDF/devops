@@ -1,7 +1,0 @@
-app:
-  container_name: app
-  build:
-    context: https://github.com/rahatbot/app.git#dev
-    args:
-      NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
-  restart: always
